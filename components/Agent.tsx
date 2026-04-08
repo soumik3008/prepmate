@@ -1,12 +1,10 @@
 "use client";
-
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
-import { interviewer } from "@/constants";
+//import { interviewer } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
 
 enum CallStatus {
@@ -87,7 +85,7 @@ const Agent = ({
       setLastMessage(messages[messages.length - 1].content);
     }
 
-    const handleGenerateFeedback = async (messages: SavedMessage[]) => {
+    const handleGenerateFeedback = async () => {
       console.log("handleGenerateFeedback");
 
       const { success, feedbackId: id } = await createFeedback({
@@ -109,36 +107,35 @@ const Agent = ({
       if (type === "generate") {
         router.push("/");
       } else {
-        handleGenerateFeedback(messages);
+        handleGenerateFeedback();
       }
     }
   }, [messages, callStatus, feedbackId, interviewId, router, type, userId]);
 
   const handleCall = async () => {
+  try {
     setCallStatus(CallStatus.CONNECTING);
 
-    if (type === "generate") {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
-      });
-    } else {
-      let formattedQuestions = "";
-      if (questions) {
-        formattedQuestions = questions
-          .map((question) => `- ${question}`)
-          .join("\n");
-      }
+    const assistantId = "56c72547-078b-45f5-adb6-7d623e43f932";
 
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
-      });
+    let formattedQuestions = "";
+
+    if (questions) {
+      formattedQuestions = questions
+        .map((q) => `- ${q}`)
+        .join("\n");
     }
-  };
+
+    await vapi.start(assistantId, {
+      variableValues: {
+        questions: formattedQuestions,
+      },
+    });
+  } catch (error) {
+    console.error("Error starting call:", error);
+    setCallStatus(CallStatus.INACTIVE);
+  }
+};
 
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
